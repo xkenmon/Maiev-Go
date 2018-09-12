@@ -1,9 +1,9 @@
 package api
 
 import (
+	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/gorm"
-	"github.com/xkenmon/maiev/dto"
 	"github.com/xkenmon/maiev/model"
 	"strconv"
 	"strings"
@@ -15,37 +15,26 @@ var articleModel = new(model.Article)
 
 func (ArticleApi) GetById(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
-	if err != nil {
-		c.AbortWithStatusJSON(400, dto.ApiMessage{
-			Code: 400,
-			Msg:  "id转换错误，请确定id为整数",
-		})
+	if checkErrAndWrite(c, err, 400, fmt.Sprintf("param id should be int,but %s find.", c.Param("id"))) {
 		return
 	}
 	var withContent bool
 	withContentStr := c.Query("content")
 	if withContentStr != "" {
 		withContent, err = strconv.ParseBool(withContentStr)
-		if err != nil {
-			c.AbortWithStatusJSON(400, dto.ApiMessage{
-				Code: 400,
-				Msg:  "content转换错误，请确定content为bool",
-			})
+		if checkErrAndWrite(c, err, 400, "param content should be bool,but "+withContentStr+" find") {
+			return
 		}
 	}
 	article, err := articleModel.GetById(id, withContent)
 	if err != nil {
 		switch err {
 		case gorm.ErrRecordNotFound:
-			c.AbortWithStatusJSON(200, dto.ApiMessage{
-				Code: 200,
-				Msg:  err.Error(),
-			})
+			writeMsg(c, 200, "record not found")
+			return
 		default:
-			c.AbortWithStatusJSON(500, dto.ApiMessage{
-				Code: 500,
-				Msg:  "服务器内部错误:" + err.Error(),
-			})
+			writeMsg(c, 500, "internal error.")
+			return
 		}
 	}
 	c.JSON(200, article)
@@ -53,18 +42,12 @@ func (ArticleApi) GetById(c *gin.Context) {
 
 func (ArticleApi) List(c *gin.Context) {
 	page, err := strconv.Atoi(c.DefaultQuery("page", "1"))
-	if err != nil {
-		c.AbortWithStatusJSON(400, dto.ApiMessage{
-			Code: 400,
-			Msg:  "param page except int:" + err.Error(),
-		})
+	if checkErrAndWrite(c, err, 400, "param page should be int, but "+c.Query("page")+" found.") {
+		return
 	}
 	limit, err := strconv.Atoi(c.DefaultQuery("limit", "10"))
-	if err != nil {
-		c.AbortWithStatusJSON(400, dto.ApiMessage{
-			Code: 400,
-			Msg:  "param limit except int:" + err.Error(),
-		})
+	if checkErrAndWrite(c, err, 400, "param limit should be int, but "+c.Query("limit")+" found.") {
+		return
 	}
 	order := c.DefaultQuery("order", "id")
 	sort := c.DefaultQuery("sort", "asc")
@@ -72,26 +55,20 @@ func (ArticleApi) List(c *gin.Context) {
 	sortValid := strings.EqualFold(sort, "asc") || strings.EqualFold(sort, "desc")
 
 	if !sortValid {
-		c.AbortWithStatusJSON(400, dto.ApiMessage{
-			Code: 400,
-			Msg:  "The sort field should be asc or desc",
-		})
+		writeMsg(c, 400, "The sort field should be asc or desc")
+		return
 	}
 
 	articles, err := articleModel.List(page, limit, order, sort)
 	if err != nil {
 		switch err {
 		case gorm.ErrRecordNotFound:
-			c.AbortWithStatusJSON(200, dto.ApiMessage{
-				Code: 200,
-				Msg:  err.Error(),
-			})
+			writeMsg(c, 200, "record not found")
+			return
 		default:
-			c.AbortWithStatusJSON(500, dto.ApiMessage{
-				Code: 500,
-				Msg:  "内部错误:" + err.Error(),
-			})
+			writeMsg(c, 500, "internal error.")
+			return
 		}
 	}
-	c.AbortWithStatusJSON(200, articles)
+	c.JSON(200, articles)
 }

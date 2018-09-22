@@ -20,10 +20,15 @@ func init() {
 		conf.Get("db.host"),
 		conf.Get("db.name")))
 	if err != nil {
-		log.Fatal("can not open database: "+err.Error())
+		log.Fatal("can not open database: " + err.Error())
 	}
+	logMode := conf.GetBool("db.log")
+	db.LogMode(logMode)
 	gorm.DefaultTableNameHandler = func(db *gorm.DB, defaultTableName string) string {
-		// 这破玩意表名默认加后缀s
+		if defaultTableName == "" {
+			return defaultTableName
+		}
+		// gorm表名默认加后缀s,所以去掉最后一个字符s
 		return "maiev_" + defaultTableName[0:len(defaultTableName)-1]
 	}
 }

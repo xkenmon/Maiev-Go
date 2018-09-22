@@ -3,6 +3,7 @@ db:
   host: bd
   password: mix@134164
   name: maiev_db
+  log: true
 server:
   port:
     8090
